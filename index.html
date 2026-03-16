@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🍽️ 직장인 메뉴 룰렛</title>
+  <style>
+    :root {
+      --primary: #FF6B6B;
+      --secondary: #FF8E53;
+      --accent: #FFC045;
+      --text: #2D3436;
+      --text-sub: #636E72;
+      --radius: 20px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(160deg, #FF6B6B 0%, #FF8E53 45%, #FFC045 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 14px 48px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      color: white;
+      padding: 12px 0 22px;
+      text-shadow: 0 2px 10px rgba(0,0,0,.15);
+    }
+    .header h1 {
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 6px;
+    }
+    .header p {
+      font-size: .9rem;
+      opacity: .88;
+      font-weight: 500;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 28px;
+      box-shadow: 0 24px 72px rgba(0,0,0,.18);
+      padding: 22px 18px 26px;
+      width: 100%;
+      max-width: 460px;
+    }
+
+    /* ── Meal Toggle ── */
+    .meal-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: #F2F2F2;
+      border-radius: 14px;
+      padding: 5px;
+      margin-bottom: 16px;
+    }
+    .meal-btn {
+      padding: 12px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .22s ease;
+      color: #aaa;
+    }
+    .meal-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 3px 12px rgba(0,0,0,.1);
+    }
+
+    /* ── Category Tabs ── */
+    .section-label {
+      font-size: .72rem;
+      font-weight: 700;
+      color: #bbb;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      margin-bottom: 9px;
+      padding-left: 2px;
+    }
+    .category-tabs {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 3px;
+      scrollbar-width: none;
+    }
+    .category-tabs::-webkit-scrollbar { display: none; }
+    .cat-btn {
+      flex-shrink: 0;
+      padding: 9px 17px;
+      border: 2px solid #EBEBEB;
+      background: #fff;
+      border-radius: 24px;
+      font-size: .875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .22s ease;
+      color: #999;
+      white-space: nowrap;
+    }
+    .cat-btn:hover { border-color: #ddd; color: #666; }
+    .cat-btn.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(255,107,107,.38);
+    }
+
+    /* ── Wheel Area ── */
+    .wheel-area {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 18px;
+      padding: 10px 0 6px;
+    }
+    .wheel-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #rouletteCanvas {
+      display: block;
+      max-width: 100%;
+      border-radius: 50%;
+      filter: drop-shadow(0 10px 28px rgba(0,0,0,.22));
+    }
+    /* Pointer at top */
+    .wheel-pointer {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 13px solid transparent;
+      border-right: 13px solid transparent;
+      border-top: 30px solid #FF6B6B;
+      filter: drop-shadow(0 4px 6px rgba(255,107,107,.55));
+      z-index: 10;
+    }
+
+    /* ── Spin Button ── */
+    .spin-btn {
+      width: 100%;
+      padding: 17px 24px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .25s, box-shadow .25s;
+      box-shadow: 0 6px 22px rgba(255,107,107,.45);
+      letter-spacing: -.3px;
+      position: relative;
+      overflow: hidden;
+    }
+    .spin-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background .2s;
+    }
+    .spin-btn:not(:disabled):hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(255,107,107,.5);
+    }
+    .spin-btn:not(:disabled):active {
+      transform: translateY(0);
+      box-shadow: 0 4px 14px rgba(255,107,107,.4);
+    }
+    .spin-btn:disabled {
+      opacity: .65;
+      cursor: default;
+    }
+    .spin-btn.spinning {
+      animation: pulseBtn 1s ease-in-out infinite;
+    }
+    @keyframes pulseBtn {
+      0%, 100% { box-shadow: 0 6px 22px rgba(255,107,107,.45); }
+      50%       { box-shadow: 0 6px 36px rgba(255,107,107,.7); }
+    }
+
+    /* ── Result Card ── */
+    .result-area {
+      margin-top: 18px;
+      display: none;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .result-area.show {
+      display: block;
+      animation: popIn .52s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(.78) translateY(18px); }
+      to   { opacity: 1; transform: scale(1)  translateY(0); }
+    }
+    .result-inner {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      padding: 24px 20px 22px;
+      text-align: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-inner::before {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,.08);
+      border-radius: 50%;
+      top: -60px; right: -50px;
+    }
+    .result-inner::after {
+      content: '';
+      position: absolute;
+      width: 140px; height: 140px;
+      background: rgba(255,255,255,.06);
+      border-radius: 50%;
+      bottom: -40px; left: -30px;
+    }
+    .result-label {
+      font-size: .85rem;
+      font-weight: 600;
+      opacity: .9;
+      margin-bottom: 14px;
+    }
+    .result-emoji {
+      display: block;
+      font-size: 3.2rem;
+      line-height: 1;
+      margin-bottom: 10px;
+      animation: emojiPop .6s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes emojiPop {
+      0%   { transform: scale(0) rotate(-20deg); }
+      80%  { transform: scale(1.25) rotate(5deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .result-name {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      position: relative;
+      z-index: 1;
+    }
+    .result-meta {
+      font-size: .8rem;
+      opacity: .78;
+      margin-top: 10px;
+      font-weight: 500;
+      position: relative;
+      z-index: 1;
+    }
+    .result-tag {
+      display: inline-block;
+      background: rgba(255,255,255,.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin: 0 3px;
+    }
+
+    /* ── Menu List Preview ── */
+    .menu-preview {
+      margin-top: 14px;
+      border-top: 1px solid #F0F0F0;
+      padding-top: 14px;
+    }
+    .menu-preview-title {
+      font-size: .78rem;
+      font-weight: 700;
+      color: #bbb;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .menu-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .menu-chip {
+      background: #F8F8F8;
+      border: 1px solid #EBEBEB;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: .8rem;
+      color: var(--text-sub);
+      font-weight: 600;
+      cursor: default;
+      transition: all .2s;
+    }
+    .menu-chip.highlight {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      color: rgba(255,255,255,.65);
+      font-size: .75rem;
+      margin-top: 22px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🍽️ 오늘 뭐 먹지?</h1>
+    <p>직장인 메뉴 추천 룰렛 · 2024년 데이터 기반</p>
+  </div>
+
+  <div class="card">
+    <!-- 점심 / 저녁 토글 -->
+    <div class="meal-toggle">
+      <button class="meal-btn active" data-meal="점심" onclick="selectMeal(this)">☀️ 점심</button>
+      <button class="meal-btn"        data-meal="저녁" onclick="selectMeal(this)">🌙 저녁</button>
+    </div>
+
+    <!-- 카테고리 탭 -->
+    <div class="section-label">음식 종류</div>
+    <div class="category-tabs" id="categoryTabs">
+      <button class="cat-btn active" data-cat="한식" onclick="selectCategory(this)">🍚 한식</button>
+      <button class="cat-btn"        data-cat="중식" onclick="selectCategory(this)">🥢 중식</button>
+      <button class="cat-btn"        data-cat="일식" onclick="selectCategory(this)">🍱 일식</button>
+      <button class="cat-btn"        data-cat="양식" onclick="selectCategory(this)">🍝 양식</button>
+      <button class="cat-btn"        data-cat="분식" onclick="selectCategory(this)">🌭 분식</button>
+    </div>
+
+    <!-- 룰렛 휠 -->
+    <div class="wheel-area">
+      <div class="wheel-wrapper">
+        <div class="wheel-pointer"></div>
+        <canvas id="rouletteCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- 돌리기 버튼 -->
+    <button class="spin-btn" id="spinBtn" onclick="spin()">🎰 룰렛 돌리기!</button>
+
+    <!-- 결과 -->
+    <div class="result-area" id="resultArea">
+      <div class="result-inner">
+        <div class="result-label">🎉 오늘의 메뉴가 정해졌어요!</div>
+        <span class="result-emoji" id="resultEmoji"></span>
+        <div class="result-name"  id="resultName"></div>
+        <div class="result-meta">
+          <span class="result-tag" id="resultTag1"></span>
+          <span class="result-tag" id="resultTag2"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 메뉴 목록 미리보기 -->
+    <div class="menu-preview">
+      <div class="menu-preview-title">현재 카테고리 메뉴 목록</div>
+      <div class="menu-chips" id="menuChips"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    직장인 점심·저녁 메뉴 빅데이터 · 매크로밀 엠브레인 2024
+  </div>
+
+<script>
+/* ═══════════════════════════════════════
+   메뉴 데이터
+   ═══════════════════════════════════════ */
+const MENUS = {
+  점심: {
+    한식: [
+      { name:'김치찌개', emoji:'🌶️' }, { name:'된장찌개', emoji:'🫕' },
+      { name:'제육볶음', emoji:'🥩' }, { name:'비빔밥',   emoji:'🥗' },
+      { name:'부대찌개', emoji:'🍲' }, { name:'순대국',   emoji:'🍜' },
+      { name:'불고기정식',emoji:'🥩'}, { name:'냉면',     emoji:'🍜' },
+      { name:'칼국수',  emoji:'🍜'  }, { name:'갈비탕',   emoji:'🍖' },
+    ],
+    중식: [
+      { name:'짜장면', emoji:'🍝' }, { name:'짬뽕',  emoji:'🌶️' },
+      { name:'볶음밥', emoji:'🍚' }, { name:'탕수육', emoji:'🍗' },
+      { name:'깐풍기', emoji:'🍗' }, { name:'마파두부',emoji:'🫕' },
+      { name:'딤섬',   emoji:'🥟' }, { name:'냉채',   emoji:'🥗' },
+    ],
+    일식: [
+      { name:'돈카츠',  emoji:'🍱' }, { name:'초밥',   emoji:'🍣' },
+      { name:'라멘',    emoji:'🍜' }, { name:'우동',   emoji:'🍜' },
+      { name:'가츠동',  emoji:'🍛' }, { name:'오야코동',emoji:'🍛' },
+      { name:'연어덮밥',emoji:'🐟' }, { name:'소바',   emoji:'🍜' },
+    ],
+    양식: [
+      { name:'피자',    emoji:'🍕' }, { name:'파스타',  emoji:'🍝' },
+      { name:'샌드위치',emoji:'🥪' }, { name:'햄버거',  emoji:'🍔' },
+      { name:'샐러드',  emoji:'🥗' }, { name:'스테이크',emoji:'🥩' },
+      { name:'리조또',  emoji:'🍚' }, { name:'오므라이스',emoji:'🍳'},
+    ],
+    분식: [
+      { name:'김밥',   emoji:'🌯' }, { name:'떡볶이', emoji:'🌶️' },
+      { name:'라볶이', emoji:'🍜' }, { name:'만두',   emoji:'🥟' },
+      { name:'우동',   emoji:'🍜' }, { name:'순대',   emoji:'🌭' },
+      { name:'어묵탕', emoji:'🍢' }, { name:'튀김',   emoji:'🍤' },
+    ],
+  },
+  저녁: {
+    한식: [
+      { name:'삼겹살',  emoji:'🥩' }, { name:'치킨',   emoji:'🍗' },
+      { name:'소고기구이',emoji:'🥩'}, { name:'돼지갈비',emoji:'🍖' },
+      { name:'족발·보쌈',emoji:'🍖' }, { name:'감자탕', emoji:'🍲' },
+      { name:'곱창',    emoji:'🥩' }, { name:'해물찜', emoji:'🦞' },
+      { name:'부대찌개',emoji:'🍲'  }, { name:'삼계탕', emoji:'🐔' },
+    ],
+    중식: [
+      { name:'짬뽕',   emoji:'🌶️' }, { name:'짜장면', emoji:'🍝' },
+      { name:'탕수육', emoji:'🍗' }, { name:'깐풍기', emoji:'🍗' },
+      { name:'마파두부',emoji:'🫕' }, { name:'볶음밥', emoji:'🍚' },
+      { name:'양장피', emoji:'🥗' }, { name:'팔보채', emoji:'🥘' },
+    ],
+    일식: [
+      { name:'모둠사시미',emoji:'🐟' }, { name:'초밥',   emoji:'🍣' },
+      { name:'이자카야', emoji:'🍶' }, { name:'라멘',   emoji:'🍜' },
+      { name:'야키니쿠', emoji:'🥩' }, { name:'샤부샤부',emoji:'🍲' },
+      { name:'연어회',   emoji:'🐟' }, { name:'나베',   emoji:'🍲' },
+    ],
+    양식: [
+      { name:'피자',   emoji:'🍕' }, { name:'치킨',   emoji:'🍗' },
+      { name:'스테이크',emoji:'🥩' }, { name:'파스타', emoji:'🍝' },
+      { name:'햄버거', emoji:'🍔' }, { name:'샐러드', emoji:'🥗' },
+      { name:'리조또', emoji:'🍚' },
+    ],
+    분식: [
+      { name:'치킨',   emoji:'🍗' }, { name:'떡볶이', emoji:'🌶️' },
+      { name:'순대',   emoji:'🌭' }, { name:'라볶이', emoji:'🍜' },
+      { name:'어묵탕', emoji:'🍢' }, { name:'파전',   emoji:'🥞' },
+      { name:'만두',   emoji:'🥟' }, { name:'닭발',   emoji:'🍗' },
+    ],
+  },
+};
+
+/* ═══════════════════════════════════════
+   카테고리 별 색상 팔레트
+   ═══════════════════════════════════════ */
+const PALETTES = {
+  한식: ['#FF6B6B','#FF7F7F','#E84A5F','#D63031','#FF4757','#C0392B','#E74C3C','#EE5A24','#FF5252','#B71C1C'],
+  중식: ['#FF9800','#FFA726','#E65100','#EF6C00','#F57C00','#FB8C00','#FF8F00','#FFC107','#FFB300','#FF6F00'],
+  일식: ['#E91E63','#EC407A','#F06292','#AD1457','#C2185B','#D81B60','#F48FB1','#880E4F','#FF4081','#FF80AB'],
+  양식: ['#2196F3','#42A5F5','#1E88E5','#0D47A1','#1976D2','#0288D1','#039BE5','#00ACC1','#00BCD4','#26C6DA'],
+  분식: ['#4CAF50','#66BB6A','#43A047','#2E7D32','#388E3C','#00897B','#00ACC1','#26A69A','#00BFA5','#1B5E20'],
+};
+
+/* ═══════════════════════════════════════
+   상태
+   ═══════════════════════════════════════ */
+let currentMeal     = '점심';
+let currentCategory = '한식';
+let isSpinning      = false;
+let currentRotation = 0;
+let winningIndex    = -1;
+let animFrameId     = null;
+
+const canvas  = document.getElementById('rouletteCanvas');
+const ctx     = canvas.getContext('2d');
+
+/* ═══════════════════════════════════════
+   캔버스 크기 설정 (반응형)
+   ═══════════════════════════════════════ */
+function setupCanvas() {
+  const card     = document.querySelector('.card');
+  const maxWidth = Math.min(card.clientWidth - 36, 380);
+  const size     = Math.max(260, maxWidth);
+  canvas.width   = size;
+  canvas.height  = size;
+  drawWheel(currentRotation, winningIndex);
+}
+
+/* ═══════════════════════════════════════
+   휠 그리기
+   ═══════════════════════════════════════ */
+function drawWheel(rotation, highlighted = -1) {
+  const items   = getCurrentItems();
+  const n       = items.length;
+  const arc     = (2 * Math.PI) / n;
+  const W       = canvas.width;
+  const H       = canvas.height;
+  const cx      = W / 2;
+  const cy      = H / 2;
+  const outerR  = cx - 10;
+  const innerR  = Math.max(24, cx * .13);
+  const colors  = PALETTES[currentCategory] || PALETTES['한식'];
+
+  ctx.clearRect(0, 0, W, H);
+
+  /* 바깥 링 장식 */
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR + 7, 0, 2 * Math.PI);
+  const ringGrad = ctx.createLinearGradient(0, 0, W, H);
+  ringGrad.addColorStop(0, 'rgba(255,255,255,.95)');
+  ringGrad.addColorStop(1, 'rgba(240,240,240,.9)');
+  ctx.fillStyle = ringGrad;
+  ctx.fill();
+
+  /* 세그먼트 */
+  for (let i = 0; i < n; i++) {
+    const startAngle = rotation + i * arc;
+    const endAngle   = startAngle + arc;
+    const color      = colors[i % colors.length];
+    const isWin      = (i === highlighted);
+
+    /* 세그먼트 채우기 */
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = isWin ? '#fff' : color;
+
+    if (isWin) {
+      /* 당첨 세그먼트 글로우 */
+      ctx.shadowColor = color;
+      ctx.shadowBlur  = 20;
+    }
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    /* 경계선 */
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, startAngle, endAngle);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)';
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+
+    /* 텍스트 */
+    const midAngle  = rotation + i * arc + arc / 2;
+    const fontSize  = n >= 10 ? 11 : (n >= 8 ? 12 : 13);
+    const emojiSize = n >= 10 ? 13 : 15;
+    const textStartX = innerR + 10;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(midAngle);
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor  = 'rgba(0,0,0,.28)';
+    ctx.shadowBlur   = 3;
+
+    /* 이모지 */
+    ctx.font      = `${emojiSize}px serif`;
+    ctx.textAlign = 'left';
+    const emojiW  = emojiSize + 3;
+    ctx.fillText(items[i].emoji, textStartX, 0);
+
+    /* 메뉴명 */
+    ctx.font      = `bold ${fontSize}px -apple-system, 'Malgun Gothic', sans-serif`;
+    ctx.fillStyle = isWin ? colors[i % colors.length] : '#fff';
+    ctx.shadowBlur = isWin ? 0 : 3;
+    const maxTW   = outerR - textStartX - emojiW - 8;
+    ctx.fillText(items[i].name, textStartX + emojiW + 2, 0, maxTW);
+    ctx.restore();
+  }
+
+  /* 중앙 원 */
+  const centerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, innerR);
+  centerGrad.addColorStop(0, '#ffffff');
+  centerGrad.addColorStop(1, '#f0f0f0');
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
+  ctx.fillStyle   = centerGrad;
+  ctx.shadowColor = 'rgba(0,0,0,.12)';
+  ctx.shadowBlur  = 8;
+  ctx.fill();
+  ctx.shadowBlur  = 0;
+  ctx.strokeStyle = 'rgba(0,0,0,.08)';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  /* 중앙 이모지 */
+  const cEmojiSize = Math.round(innerR * 1.0);
+  ctx.font         = `${cEmojiSize}px serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle    = '#fff';
+  ctx.shadowBlur   = 0;
+  ctx.fillText(isSpinning ? '🎲' : '🎯', cx, cy);
+}
+
+/* ═══════════════════════════════════════
+   현재 메뉴 목록
+   ═══════════════════════════════════════ */
+function getCurrentItems() {
+  return MENUS[currentMeal][currentCategory];
+}
+
+/* ═══════════════════════════════════════
+   메뉴 칩 렌더
+   ═══════════════════════════════════════ */
+function renderChips(highlightIdx = -1) {
+  const items = getCurrentItems();
+  const chips = document.getElementById('menuChips');
+  chips.innerHTML = items.map((item, i) =>
+    `<span class="menu-chip${i === highlightIdx ? ' highlight' : ''}">${item.emoji} ${item.name}</span>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════
+   점심 / 저녁 선택
+   ═══════════════════════════════════════ */
+function selectMeal(btn) {
+  if (isSpinning) return;
+  currentMeal = btn.dataset.meal;
+  document.querySelectorAll('.meal-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  reset();
+}
+
+/* ═══════════════════════════════════════
+   카테고리 선택
+   ═══════════════════════════════════════ */
+function selectCategory(btn) {
+  if (isSpinning) return;
+  currentCategory = btn.dataset.cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  reset();
+}
+
+/* ═══════════════════════════════════════
+   리셋
+   ═══════════════════════════════════════ */
+function reset() {
+  currentRotation = 0;
+  winningIndex    = -1;
+  drawWheel(0, -1);
+  hideResult();
+  renderChips(-1);
+}
+
+function hideResult() {
+  const area = document.getElementById('resultArea');
+  area.classList.remove('show');
+  area.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════
+   이징 함수
+   ═══════════════════════════════════════ */
+function easeOutQuart(t) {
+  return 1 - Math.pow(1 - t, 4);
+}
+
+/* ═══════════════════════════════════════
+   룰렛 돌리기
+   ═══════════════════════════════════════ */
+function spin() {
+  if (isSpinning) return;
+
+  isSpinning = true;
+  winningIndex = -1;
+  const spinBtn = document.getElementById('spinBtn');
+  spinBtn.disabled = true;
+  spinBtn.classList.add('spinning');
+  spinBtn.textContent = '🎲 돌아가는 중...';
+  hideResult();
+  renderChips(-1);
+
+  /* 랜덤 회전량: 최소 5바퀴 + 최대 8바퀴 추가 + 랜덤 오프셋 */
+  const extraTurns    = 5 + Math.random() * 8;
+  const randomOffset  = Math.random() * Math.PI * 2;
+  const totalRotation = Math.PI * 2 * extraTurns + randomOffset;
+  const startRotation = currentRotation;
+  const duration      = 4200 + Math.random() * 1800; /* 4.2 ~ 6 초 */
+  const startTime     = performance.now();
+
+  function animate(now) {
+    const elapsed  = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    currentRotation = startRotation + totalRotation * easeOutQuart(progress);
+    drawWheel(currentRotation, -1);
+
+    if (progress < 1) {
+      animFrameId = requestAnimationFrame(animate);
+    } else {
+      /* 스핀 종료 */
+      isSpinning = false;
+      spinBtn.disabled = false;
+      spinBtn.classList.remove('spinning');
+      spinBtn.textContent = '🎰 다시 돌리기!';
+
+      /* 당첨 세그먼트 계산 */
+      const items = getCurrentItems();
+      const n     = items.length;
+      const arc   = (2 * Math.PI) / n;
+      /* 포인터 = 12시 방향 = -π/2 */
+      const POINTER = -Math.PI / 2;
+      let relAngle  = ((POINTER - currentRotation) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      const idx     = Math.floor(relAngle / arc) % n;
+
+      winningIndex = idx;
+      drawWheel(currentRotation, idx);
+      showResult(items[idx]);
+      renderChips(idx);
+    }
+  }
+
+  animFrameId = requestAnimationFrame(animate);
+}
+
+/* ═══════════════════════════════════════
+   결과 표시
+   ═══════════════════════════════════════ */
+function showResult(item) {
+  document.getElementById('resultEmoji').textContent = item.emoji;
+  document.getElementById('resultName').textContent  = item.name;
+  document.getElementById('resultTag1').textContent  = `${currentMeal} 메뉴`;
+  document.getElementById('resultTag2').textContent  = currentCategory;
+
+  const area = document.getElementById('resultArea');
+  area.style.display = 'block';
+  /* 한 프레임 뒤에 클래스 추가 → 트랜지션 트리거 */
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      area.classList.add('show');
+    });
+  });
+
+  /* 결과 카드 스크롤 */
+  setTimeout(() => {
+    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 150);
+}
+
+/* ═══════════════════════════════════════
+   초기화
+   ═══════════════════════════════════════ */
+window.addEventListener('load', () => {
+  setupCanvas();
+  renderChips(-1);
+});
+
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(setupCanvas, 120);
+});
+</script>
+</body>
+</html>
